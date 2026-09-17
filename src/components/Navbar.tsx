@@ -15,7 +15,6 @@ function getSolidThreshold() {
 
 const links = [
   { href: "/", label: "Home" },
-  { href: "/projects", label: "Projects" },
   { href: "/about", label: "Our Story" },
   { href: "/calculator", label: "Price Calculator" },
 ];

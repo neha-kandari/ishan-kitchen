@@ -2,99 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { unsplash } from "@/lib/images";
-
-// ── Data ──────────────────────────────────────────────────
-const LAYOUTS = [
-  {
-    id: "l-shaped",
-    label: "L-Shaped",
-    bestFor: "Corner spaces",
-    desc: "Two adjacent walls working together.",
-    walls: ["A", "B"] as string[],
-    defaults: { A: 8, B: 6 },
-  },
-  {
-    id: "straight",
-    label: "Straight",
-    bestFor: "Narrow kitchens",
-    desc: "One long wall — minimal, clean, open.",
-    walls: ["A"] as string[],
-    defaults: { A: 10, B: 0 },
-  },
-  {
-    id: "u-shaped",
-    label: "U-Shaped",
-    bestFor: "Maximum storage",
-    desc: "Three walls of counter, storage, and workflow.",
-    walls: ["A", "B"] as string[],
-    defaults: { A: 8, B: 6 },
-  },
-  {
-    id: "parallel",
-    label: "Parallel",
-    bestFor: "Galley kitchens",
-    desc: "Two facing walls — efficient and elegant.",
-    walls: ["A", "B"] as string[],
-    defaults: { A: 10, B: 10 },
-  },
-];
-
-const PACKAGES = [
-  {
-    id: "stone",
-    label: "Stone Series",
-    tier: "₹₹",
-    sub: "Essential luxury",
-    tagline:
-      "Handcrafted stone surfaces with refined finishes — the ideal first step into premium.",
-    rate: 45000,
-    features: [
-      "Natural stone countertops",
-      "Soft-close cabinetry",
-      "Standard hardware",
-      "Integrated lighting",
-    ],
-    img: unsplash("1558346648-9757f2fa4474", 800, 560),
-    recommended: false,
-  },
-  {
-    id: "signature",
-    label: "Signature",
-    tier: "₹₹₹",
-    sub: "Most popular",
-    tagline:
-      "Our best-selling collection — premium stone, bespoke bronze hardware, full-height joinery.",
-    rate: 75000,
-    features: [
-      "Premium stone selection",
-      "Custom bronze hardware",
-      "Full-height cabinetry",
-      "Island option",
-      "Recessed lighting",
-    ],
-    img: unsplash("1769737122085-97b1ee5ab104", 800, 560),
-    recommended: true,
-  },
-  {
-    id: "bespoke",
-    label: "Bespoke",
-    tier: "₹₹₹₹",
-    sub: "Collector grade",
-    tagline:
-      "Museum-grade specification — rare stone, fully custom joinery, gallery lighting, white-glove delivery.",
-    rate: 125000,
-    features: [
-      "Rare stone curation",
-      "Bespoke joinery",
-      "Gallery-grade lighting",
-      "Full-scope design",
-      "White-glove install",
-    ],
-    img: unsplash("1663811397261-916af74a9363", 800, 560),
-    recommended: false,
-  },
-];
+import type { CalculatorConfig, LayoutOption, PackageOption } from "./configs";
 
 const CITIES = [
   "New Delhi",
@@ -109,8 +17,6 @@ const CITIES = [
   "Other",
 ];
 
-const STEPS = ["Kitchen Layout", "Measurements", "Select Package", "Get Estimate"];
-
 type Dims = { A: number; B: number };
 
 function calcRft(id: string, d: Dims) {
@@ -120,25 +26,72 @@ function calcRft(id: string, d: Dims) {
 }
 
 // ── SVG diagrams ───────────────────────────────────────────
+/** Door-seam + handle marks overlaid on a wall-run rect, so the wardrobe
+ * calculator's diagrams read as shutter fronts rather than bare kitchen
+ * counters. Kitchen mode never calls this — rects stay blank counter bars. */
+function wardrobeDoors(
+  rect: { x: number; y: number; w: number; h: number; dir: "h" | "v" },
+  stroke: string,
+  panels = 3
+) {
+  const { x, y, w, h, dir } = rect;
+  const lines = [];
+  if (dir === "h") {
+    for (let i = 1; i < panels; i++) {
+      const lx = x + (w / panels) * i;
+      lines.push(
+        <line key={`seam-${i}`} x1={lx} y1={y + 3} x2={lx} y2={y + h - 3} stroke={stroke} strokeWidth="1" opacity={0.5} />
+      );
+    }
+    for (let i = 0; i < panels; i++) {
+      const cx = x + (w / panels) * (i + 1) - 6;
+      const cy = y + h / 2;
+      lines.push(
+        <line key={`handle-${i}`} x1={cx} y1={cy - 4} x2={cx} y2={cy + 4} stroke={stroke} strokeWidth="1.4" opacity={0.85} strokeLinecap="round" />
+      );
+    }
+  } else {
+    for (let i = 1; i < panels; i++) {
+      const ly = y + (h / panels) * i;
+      lines.push(
+        <line key={`seam-${i}`} x1={x + 3} y1={ly} x2={x + w - 3} y2={ly} stroke={stroke} strokeWidth="1" opacity={0.5} />
+      );
+    }
+    for (let i = 0; i < panels; i++) {
+      const cy = y + (h / panels) * (i + 1) - 6;
+      const cx = x + w / 2;
+      lines.push(
+        <line key={`handle-${i}`} x1={cx - 4} y1={cy} x2={cx + 4} y2={cy} stroke={stroke} strokeWidth="1.4" opacity={0.85} strokeLinecap="round" />
+      );
+    }
+  }
+  return lines;
+}
+
 function LayoutDiagram({
   id,
   dims,
   dark,
+  kind,
 }: {
   id: string;
   dims?: Dims;
   dark?: boolean;
+  kind: "kitchen" | "wardrobe";
 }) {
   const stroke = dark ? "#C4AA8A" : "#372314";
   const fill = dark ? "rgba(196,170,138,0.12)" : "rgba(55,35,20,0.09)";
   const tc = dark ? "#C4AA8A" : "#372314";
   const dim = (v: number) => (dims ? `${v} ft` : "");
+  const doors = kind === "wardrobe";
 
   if (id === "l-shaped")
     return (
       <svg viewBox="0 0 140 120" fill="none" className="h-full w-full">
         <rect x="12" y="12" width="116" height="34" fill={fill} stroke={stroke} strokeWidth="1.8" rx="1" />
         <rect x="12" y="12" width="36" height="96" fill={fill} stroke={stroke} strokeWidth="1.8" rx="1" />
+        {doors && wardrobeDoors({ x: 12, y: 12, w: 116, h: 34, dir: "h" }, stroke)}
+        {doors && wardrobeDoors({ x: 12, y: 46, w: 36, h: 62, dir: "v" }, stroke)}
         {dims && (
           <>
             <line x1="48" y1="4" x2="128" y2="4" stroke={tc} strokeWidth="0.8" strokeDasharray="3,3" />
@@ -157,6 +110,7 @@ function LayoutDiagram({
     return (
       <svg viewBox="0 0 140 120" fill="none" className="h-full w-full">
         <rect x="12" y="44" width="116" height="32" fill={fill} stroke={stroke} strokeWidth="1.8" rx="1" />
+        {doors && wardrobeDoors({ x: 12, y: 44, w: 116, h: 32, dir: "h" }, stroke, 4)}
         {dims && (
           <>
             <line x1="12" y1="34" x2="128" y2="34" stroke={tc} strokeWidth="0.8" strokeDasharray="3,3" />
@@ -173,6 +127,9 @@ function LayoutDiagram({
         <rect x="12" y="12" width="116" height="28" fill={fill} stroke={stroke} strokeWidth="1.8" rx="1" />
         <rect x="12" y="12" width="28" height="96" fill={fill} stroke={stroke} strokeWidth="1.8" rx="1" />
         <rect x="100" y="12" width="28" height="96" fill={fill} stroke={stroke} strokeWidth="1.8" rx="1" />
+        {doors && wardrobeDoors({ x: 12, y: 12, w: 116, h: 28, dir: "h" }, stroke, 4)}
+        {doors && wardrobeDoors({ x: 12, y: 40, w: 28, h: 68, dir: "v" }, stroke, 2)}
+        {doors && wardrobeDoors({ x: 100, y: 40, w: 28, h: 68, dir: "v" }, stroke, 2)}
         {dims && (
           <>
             <text x="70" y="30" textAnchor="middle" fill={tc} fontSize="9.5" fontFamily="Manrope,sans-serif" fontWeight="600">
@@ -189,6 +146,8 @@ function LayoutDiagram({
     <svg viewBox="0 0 140 120" fill="none" className="h-full w-full">
       <rect x="12" y="22" width="116" height="28" fill={fill} stroke={stroke} strokeWidth="1.8" rx="1" />
       <rect x="12" y="70" width="116" height="28" fill={fill} stroke={stroke} strokeWidth="1.8" rx="1" />
+      {doors && wardrobeDoors({ x: 12, y: 22, w: 116, h: 28, dir: "h" }, stroke, 4)}
+      {doors && wardrobeDoors({ x: 12, y: 70, w: 116, h: 28, dir: "h" }, stroke, 4)}
       {dims && (
         <>
           <text x="70" y="39" textAnchor="middle" fill={tc} fontSize="9.5" fontFamily="Manrope,sans-serif" fontWeight="600">
@@ -306,10 +265,10 @@ function SummaryPanel({
   high,
   city,
 }: {
-  layout: (typeof LAYOUTS)[number];
+  layout: LayoutOption;
   dims: Dims;
   rft: number;
-  pkg: (typeof PACKAGES)[number];
+  pkg: PackageOption;
   low: number;
   high: number;
   city: string;
@@ -356,12 +315,23 @@ function SummaryPanel({
 }
 
 // ── Main ──────────────────────────────────────────────────
-export default function PriceCalculatorWizard() {
+export default function CalculatorWizard({
+  config,
+  topSlot,
+}: {
+  config: CalculatorConfig;
+  topSlot?: React.ReactNode;
+}) {
+  const { layouts: LAYOUTS, packages: PACKAGES } = config;
+  const STEPS = [`${config.layoutWord} Layout`, "Measurements", "Select Package", "Get Estimate"];
+
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState<"f" | "b">("f");
-  const [layoutId, setLayoutId] = useState("l-shaped");
-  const [dims, setDims] = useState<Dims>({ A: 8, B: 6 });
-  const [pkgId, setPkgId] = useState("signature");
+  const [layoutId, setLayoutId] = useState(LAYOUTS[0].id);
+  const [dims, setDims] = useState<Dims>({ A: LAYOUTS[0].defaults.A, B: LAYOUTS[0].defaults.B });
+  const [pkgId, setPkgId] = useState(
+    PACKAGES.find((p) => p.recommended)?.id ?? PACKAGES[0].id
+  );
   const [form, setForm] = useState({ name: "", email: "", phone: "", city: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -393,6 +363,7 @@ export default function PriceCalculatorWizard() {
     <div className="min-h-screen bg-cream pb-[100px]">
       {/* ── Stepper (inline, clears fixed nav) ── */}
       <div className="border-b border-[#EAE4DA] bg-bg-warm pt-[72px]">
+        {topSlot}
         <div className="mx-auto flex max-w-[980px] items-center px-5 py-3 md:px-10 md:pb-[18px] md:pt-5">
           {STEPS.map((label, i) => {
             const done = i < step;
@@ -454,14 +425,14 @@ export default function PriceCalculatorWizard() {
         <div className="mb-11 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="mb-3 font-sans text-[9px] font-semibold tracking-[0.28em] text-accent">
-              KITCHEN PRICE CALCULATOR
+              {config.eyebrow}
             </p>
             <h1 className="text-[#1E0E06] font-serif font-normal leading-[0.98] tracking-[-0.03em] text-[clamp(2.6rem,5vw,5.2rem)]">
               {step === 0 && (
                 <>
                   Select your
                   <br />
-                  <em className="font-medium">kitchen layout.</em>
+                  <em className="font-medium">{config.layoutWord.toLowerCase()} layout.</em>
                 </>
               )}
               {step === 1 && (
@@ -543,7 +514,7 @@ export default function PriceCalculatorWizard() {
 
                     {/* Diagram */}
                     <div className="mb-[22px] h-[72px] md:h-[110px]">
-                      <LayoutDiagram id={l.id} dark={sel} />
+                      <LayoutDiagram id={l.id} dark={sel} kind={config.kind} />
                     </div>
 
                     {/* Label */}
@@ -586,7 +557,7 @@ export default function PriceCalculatorWizard() {
                 </p>
                 <p className="mb-9 font-serif text-lg italic text-cream/60">{layout.desc}</p>
                 <div className="min-h-[160px] flex-1 md:min-h-[200px]">
-                  <LayoutDiagram id={layoutId} dark dims={dims} />
+                  <LayoutDiagram id={layoutId} dark dims={dims} kind={config.kind} />
                 </div>
                 <div className="mt-8 border-t border-cream/[0.08] pt-6">
                   <p className="mb-[10px] font-sans text-[8px] tracking-[0.2em] text-accent">TOTAL RUNNING FEET</p>

@@ -46,10 +46,10 @@ export default function FinalCTA() {
               BOOK A CONSULTATION
             </Link>
             <Link
-              href="/projects"
+              href="/#gallery"
               className="arrow-link text-label border-b border-border pb-1 text-ink"
             >
-              EXPLORE PROJECTS
+              VIEW GALLERY
               <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
                 <path
                   d="M0 6h14M9 1l5 5-5 5"
