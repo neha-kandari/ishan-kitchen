@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /** On the home page the hero is a tall (400vh) scroll-driven sequence —
  * the nav should stay transparent for its whole length, not just the
@@ -26,6 +26,11 @@ export default function Navbar() {
   const isHome = pathname === "/";
   const transparent = isHome && !scrolled && !open;
 
+  const navRef = useRef<HTMLElement>(null);
+  const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [indicator, setIndicator] = useState({ left: 0, width: 0, opacity: 0 });
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > getSolidThreshold());
     onScroll();
@@ -37,13 +42,41 @@ export default function Navbar() {
     };
   }, [pathname]);
 
+  // The underline indicator tracks whichever link is hovered, snapping back
+  // to the active route the moment the pointer leaves the nav — a single
+  // sliding mark reads as more considered than a static underline per link.
+  const measure = (el: HTMLAnchorElement | null) => {
+    const nav = navRef.current;
+    if (!el || !nav) {
+      setIndicator((s) => ({ ...s, opacity: 0 }));
+      return;
+    }
+    const navRect = nav.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
+    setIndicator({ left: rect.left - navRect.left, width: rect.width, opacity: 1 });
+  };
+
+  useLayoutEffect(() => {
+    const activeIdx = links.findIndex((l) => l.href === pathname);
+    measure(activeIdx >= 0 ? linkRefs.current[activeIdx] : null);
+  }, [pathname]);
+
+  useEffect(() => {
+    const onResize = () => {
+      const idx = hoveredIdx ?? links.findIndex((l) => l.href === pathname);
+      if (idx >= 0) measure(linkRefs.current[idx]);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [pathname, hoveredIdx]);
+
   return (
     <Fragment>
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-colors duration-500 ${
+        className={`fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow,border-color] duration-500 ${
           transparent
             ? "bg-transparent"
-            : "border-b border-ink/10 bg-cream/90 backdrop-blur-md"
+            : "border-b border-ink/10 bg-cream/90 shadow-[0_1px_24px_rgba(30,14,6,0.06)] backdrop-blur-md"
         }`}
       >
         <div
@@ -54,25 +87,55 @@ export default function Navbar() {
           <Link
             href="/"
             data-cursor="open"
-            className="flex flex-col items-start gap-1"
+            className="group flex flex-col items-start gap-1.5"
           >
-            <span className="font-serif text-xl italic tracking-[0.04em]">
+            <span className="font-serif text-xl italic tracking-[0.04em] transition-opacity duration-300 group-hover:opacity-70">
               Arka
             </span>
             <span
-              className={`text-[7px] font-medium tracking-[0.28em] ${
+              className={`relative flex items-center gap-[5px] text-[7px] font-medium tracking-[0.28em] ${
                 transparent ? "text-white/60" : "text-stone-text"
               }`}
             >
+              <span
+                className={`h-[3px] w-[3px] rounded-full transition-colors duration-300 ${
+                  transparent ? "bg-white/60" : "bg-accent/70"
+                }`}
+              />
               KITCHEN STUDIO
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-10 text-[13px] md:flex">
-            {links.map((l) => (
+          <nav
+            ref={navRef}
+            onMouseLeave={() => {
+              setHoveredIdx(null);
+              const activeIdx = links.findIndex((l) => l.href === pathname);
+              measure(activeIdx >= 0 ? linkRefs.current[activeIdx] : null);
+            }}
+            className="relative hidden items-center gap-10 text-[13px] md:flex"
+          >
+            <span
+              className={`pointer-events-none absolute -bottom-1 h-px transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                transparent ? "bg-white" : "bg-ink"
+              }`}
+              style={{
+                width: indicator.width,
+                transform: `translateX(${indicator.left}px)`,
+                opacity: indicator.opacity,
+              }}
+            />
+            {links.map((l, i) => (
               <Link
                 key={l.href}
                 href={l.href}
+                ref={(el) => {
+                  linkRefs.current[i] = el;
+                }}
+                onMouseEnter={() => {
+                  setHoveredIdx(i);
+                  measure(linkRefs.current[i]);
+                }}
                 data-cursor="open"
                 className={`relative pb-1 transition-opacity ${
                   pathname === l.href
@@ -81,13 +144,6 @@ export default function Navbar() {
                 }`}
               >
                 {l.label}
-                {pathname === l.href && (
-                  <span
-                    className={`absolute inset-x-0 -bottom-0.5 h-px ${
-                      transparent ? "bg-white" : "bg-ink"
-                    }`}
-                  />
-                )}
               </Link>
             ))}
           </nav>
@@ -95,13 +151,16 @@ export default function Navbar() {
           <Link
             href="/calculator"
             data-cursor="open"
-            className={`hidden rounded-full border px-5 py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors md:inline-block ${
+            className={`group hidden items-center gap-2 rounded-full border px-5 py-2.5 text-[11px] font-medium uppercase tracking-[0.2em] transition-colors md:inline-flex ${
               transparent
                 ? "border-white/70 text-white hover:bg-white hover:text-ink"
                 : "border-ink text-ink hover:bg-ink hover:text-cream"
             }`}
           >
             Book Consultation
+            <span className="inline-block max-w-0 overflow-hidden opacity-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:ml-0.5 group-hover:max-w-[14px] group-hover:opacity-100">
+              →
+            </span>
           </Link>
 
           <button

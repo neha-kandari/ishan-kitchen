@@ -1,10 +1,38 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import InViewReveal from "@/components/InViewReveal";
+import ZoomImage from "@/components/ZoomImage";
 import { unsplash } from "@/lib/images";
 
-const values = ["Craft", "Precision", "Material", "Detail", "Longevity"];
+const values: { label: string; img: string; alt: string }[] = [
+  {
+    label: "Craft",
+    img: unsplash("1736506159893-22cca29b8018", 1600, 900),
+    alt: "Brushed European oak grain",
+  },
+  {
+    label: "Precision",
+    img: unsplash("1566305977571-5666677c6e98", 1600, 900),
+    alt: "Nero Marquina dark marble",
+  },
+  {
+    label: "Material",
+    img: unsplash("1551554781-c46200ea959d", 1600, 900),
+    alt: "Calacatta marble texture",
+  },
+  {
+    label: "Detail",
+    img: unsplash("1603369425250-b276f2006ec0", 1600, 900),
+    alt: "Roman travertine stone",
+  },
+  {
+    label: "Longevity",
+    img: unsplash("1736506159776-22ca388780fa", 1600, 900),
+    alt: "Smoked walnut grain",
+  },
+];
 
 const craftStats: [string, string][] = [
   ["12", "Years"],
@@ -44,16 +72,16 @@ const team = [
 ];
 
 export default function AboutContent() {
+  const [hoveredValue, setHoveredValue] = useState<number | null>(null);
+
   return (
     <>
       {/* Hero */}
       <section className="relative h-[75vh] min-h-[460px] w-full overflow-hidden bg-charcoal">
-        <Image
+        <ZoomImage
           src={unsplash("1502005097973-6a7082348e28", 1800, 1000)}
           alt="Architectural kitchen design studio"
-          fill
           priority
-          className="object-cover"
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/25 to-dark/55" />
@@ -116,20 +144,62 @@ export default function AboutContent() {
         </div>
       </section>
 
-      {/* Brand values — typographic */}
-      <section className="overflow-hidden bg-bg py-24">
-        <div className="mx-auto max-w-[1600px] px-6 md:px-16 lg:px-24">
+      {/* Brand values — typographic, with a hover backdrop photo per row */}
+      <section className="relative overflow-hidden bg-bg py-24">
+        <div className="pointer-events-none absolute inset-0 z-0">
+          {values.map((v, i) => (
+            <Image
+              key={v.label}
+              src={v.img}
+              alt={v.alt}
+              fill
+              sizes="100vw"
+              className="object-cover transition-opacity duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              style={{ opacity: hoveredValue === i ? 1 : 0 }}
+            />
+          ))}
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-dark/85 via-dark/55 to-dark/40 transition-opacity duration-500"
+            style={{ opacity: hoveredValue !== null ? 1 : 0 }}
+          />
+        </div>
+
+        <div className="relative z-10 mx-auto max-w-[1600px] px-6 md:px-16 lg:px-24">
           <InViewReveal>
-            <p className="mb-12 text-label text-accent">Our Values</p>
+            <p
+              className={`mb-12 text-label transition-colors duration-500 ${
+                hoveredValue !== null ? "text-cream/60" : "text-accent"
+              }`}
+            >
+              Our Values
+            </p>
           </InViewReveal>
         </div>
         {values.map((v, i) => (
-          <InViewReveal key={v} delay={i * 80}>
-            <div className="group flex cursor-default items-center justify-between overflow-hidden border-b border-border px-6 py-6 md:px-16 lg:px-24">
-              <h3 className="font-serif font-light leading-[0.95] tracking-[-0.02em] text-ink transition-colors duration-500 text-[clamp(2.5rem,7vw,9rem)] group-hover:text-accent">
-                {v}
+          <InViewReveal key={v.label} delay={i * 80}>
+            <div
+              onMouseEnter={() => setHoveredValue(i)}
+              onMouseLeave={() => setHoveredValue(null)}
+              className={`relative z-10 flex cursor-default items-center justify-between overflow-hidden border-b px-6 py-6 transition-colors duration-500 md:px-16 lg:px-24 ${
+                hoveredValue !== null ? "border-cream/15" : "border-border"
+              }`}
+            >
+              <h3
+                className={`font-serif font-light leading-[0.95] tracking-[-0.02em] transition-colors duration-500 text-[clamp(2.5rem,7vw,9rem)] ${
+                  hoveredValue === i
+                    ? "italic text-bg-warm"
+                    : hoveredValue !== null
+                      ? "text-cream/50"
+                      : "text-ink"
+                }`}
+              >
+                {v.label}
               </h3>
-              <p className="hidden text-[9px] font-semibold uppercase tracking-[0.18em] text-ink-muted md:block">
+              <p
+                className={`hidden text-[9px] font-semibold uppercase tracking-[0.18em] transition-colors duration-500 md:block ${
+                  hoveredValue !== null ? "text-cream/40" : "text-ink-muted"
+                }`}
+              >
                 0{i + 1}
               </p>
             </div>

@@ -34,9 +34,16 @@ export default function Hero() {
     // ~4 scrolls regardless of how long the combined clips run.
     const SCROLL_STEPS = 4;
 
+    // Real playback, just faster — muted video has no audio pitch to worry
+    // about, so this cuts wall-clock wait per chunk without any scrubbing.
+    const PLAYBACK_RATE = 1.6;
+
     gsap.set(endEl, { autoAlpha: 0 });
     gsap.set(clips.slice(1), { autoAlpha: 0 });
-    clips.forEach((clip) => clip.pause());
+    clips.forEach((clip) => {
+      clip.pause();
+      clip.playbackRate = PLAYBACK_RATE;
+    });
 
     const html = document.documentElement;
     const previousOverflow = html.style.overflow;
