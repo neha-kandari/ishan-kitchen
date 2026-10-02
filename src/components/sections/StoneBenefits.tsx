@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { unsplash } from "@/lib/images";
 
@@ -63,12 +63,7 @@ const BENEFITS = [
   },
 ];
 
-function clamp(v: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, v));
-}
-
 export default function StoneBenefits() {
-  const sectionRef = useRef<HTMLElement>(null);
   const [activeIdx, setActiveIdx] = useState(0);
   const [prevIdx, setPrevIdx] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState<number | null>(0);
@@ -80,35 +75,6 @@ export default function StoneBenefits() {
       return idx;
     });
   };
-
-  useEffect(() => {
-    let raf = 0;
-    const update = () => {
-      const el = sectionRef.current;
-      if (!el) return;
-      const scrollable = el.offsetHeight - window.innerHeight;
-      if (scrollable <= 0) return;
-      const p = clamp(-el.getBoundingClientRect().top / scrollable, 0, 1);
-      const idx = Math.min(BENEFITS.length - 1, Math.floor(p * BENEFITS.length));
-      setActiveIdx((prev) => {
-        if (idx > prev) {
-          setPrevIdx(prev);
-          return idx;
-        }
-        return prev;
-      });
-    };
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, []);
 
   const active = BENEFITS[activeIdx];
   const prev = prevIdx !== null ? BENEFITS[prevIdx] : null;
@@ -182,51 +148,48 @@ export default function StoneBenefits() {
         </div>
       </section>
 
-      {/* ── Desktop: sticky scroll ── */}
-      <section
-        ref={sectionRef}
-        className="relative hidden bg-cream md:block"
-        style={{ height: `${BENEFITS.length * 100}vh` }}
-      >
-        <div className="sticky top-[88px] flex h-[calc(100vh-88px)] flex-col overflow-hidden">
-          <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col overflow-hidden px-16 lg:px-24">
-            <div className="flex shrink-0 items-end justify-between py-10">
-              <div>
-                <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.3em] text-stone-text">
-                  04 — Stone Advantages
-                </p>
-                <h2 className="font-serif font-light leading-[1.05] text-ink text-[clamp(1.8rem,3.2vw,3.2rem)]">
-                  Why stone makes <em>all the difference.</em>
-                </h2>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="relative h-px w-16 bg-ink/20">
-                  <div
-                    className="absolute inset-y-0 left-0 bg-ink transition-[width] duration-500"
-                    style={{ width: `${((activeIdx + 1) / BENEFITS.length) * 100}%` }}
-                  />
-                </div>
-                <p className="text-[10px] tracking-[0.1em] text-ink">
-                  {String(activeIdx + 1).padStart(2, "0")} /{" "}
-                  {String(BENEFITS.length).padStart(2, "0")}
-                </p>
-              </div>
+      {/* ── Desktop: hover/click panel ── */}
+      <section className="relative hidden bg-cream py-20 md:block">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col px-16 lg:px-24">
+          <div className="flex shrink-0 items-end justify-between pb-10">
+            <div>
+              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.3em] text-stone-text">
+                04 — Stone Advantages
+              </p>
+              <h2 className="font-serif font-light leading-[1.05] text-ink text-[clamp(1.8rem,3.2vw,3.2rem)]">
+                Why stone makes <em>all the difference.</em>
+              </h2>
             </div>
+            <div className="flex items-center gap-3">
+              <div className="relative h-px w-16 bg-ink/20">
+                <div
+                  className="absolute inset-y-0 left-0 bg-ink transition-[width] duration-500"
+                  style={{ width: `${((activeIdx + 1) / BENEFITS.length) * 100}%` }}
+                />
+              </div>
+              <p className="text-[10px] tracking-[0.1em] text-ink">
+                {String(activeIdx + 1).padStart(2, "0")} /{" "}
+                {String(BENEFITS.length).padStart(2, "0")}
+              </p>
+            </div>
+          </div>
 
-            <div className="grid flex-1 grid-cols-[380px_1fr] overflow-hidden border border-ink/15">
-              <div className="flex flex-col overflow-hidden border-r border-ink/15">
-                <div className="flex-1 overflow-hidden">
-                  {BENEFITS.map((b, i) => {
-                    const isActive = i === activeIdx;
-                    return (
-                      <button
-                        key={b.num}
-                        type="button"
-                        onClick={() => goTo(i)}
-                        className={`relative flex w-full items-center overflow-hidden border-b border-ink/15 px-8 text-left transition-colors duration-500 ${
-                          isActive ? "bg-beige/50" : "h-11 bg-transparent"
-                        }`}
-                      >
+          <div className="grid h-[70vh] min-h-[540px] max-h-[720px] grid-cols-[380px_1fr] overflow-hidden border border-ink/15">
+            <div className="flex flex-col overflow-hidden border-r border-ink/15">
+              <div className="flex-1 overflow-y-auto">
+                {BENEFITS.map((b, i) => {
+                  const isActive = i === activeIdx;
+                  return (
+                    <button
+                      key={b.num}
+                      type="button"
+                      onClick={() => goTo(i)}
+                      onMouseEnter={() => goTo(i)}
+                      onFocus={() => goTo(i)}
+                      className={`relative flex w-full items-center overflow-hidden border-b border-ink/15 px-8 text-left transition-colors duration-500 ${
+                        isActive ? "bg-beige/50" : "h-11 bg-transparent"
+                      }`}
+                    >
                         <span
                           className="absolute inset-y-0 left-0 w-[3px] bg-ink transition-opacity duration-500"
                           style={{ opacity: isActive ? 1 : 0 }}
@@ -266,27 +229,15 @@ export default function StoneBenefits() {
                   })}
                 </div>
                 <div className="flex shrink-0 items-center gap-2.5 border-t border-ink/15 px-8 py-3.5">
-                  <svg width="12" height="18" viewBox="0 0 12 18" fill="none">
-                    <rect
-                      x="1"
-                      y="1"
-                      width="10"
-                      height="16"
-                      rx="5"
-                      stroke="rgba(39,38,36,0.5)"
-                      strokeWidth="1.2"
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"
+                      fill="#272624"
+                      fillOpacity="0.65"
                     />
-                    <circle cx="6" cy="5" r="1.5" fill="#272624">
-                      <animate
-                        attributeName="cy"
-                        values="5;10;5"
-                        dur="1.8s"
-                        repeatCount="indefinite"
-                      />
-                    </circle>
                   </svg>
                   <p className="text-[9px] tracking-[0.14em] text-ink/60">
-                    SCROLL TO EXPLORE
+                    HOVER TO PREVIEW
                   </p>
                 </div>
               </div>
@@ -347,10 +298,7 @@ export default function StoneBenefits() {
                 </div>
               </div>
             </div>
-            <div className="h-8 shrink-0" />
           </div>
-        </div>
-
         <style>{`
           @keyframes sbFadeIn {
             from { opacity: 0; transform: scale(1.04); }

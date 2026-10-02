@@ -193,6 +193,11 @@ export default function MaterialReel() {
             <div
               key={m.name}
               onClick={() => setActive(i)}
+              onMouseEnter={() => setActive(i)}
+              onFocus={() => setActive(i)}
+              tabIndex={0}
+              role="button"
+              aria-label={`Preview ${m.name}`}
               className="relative cursor-pointer overflow-hidden border-r border-cream/10 transition-[flex] duration-700 ease-[cubic-bezier(0.76,0,0.24,1)] last:border-r-0"
               style={{ flex: isActive ? 4 : 1 }}
             >
