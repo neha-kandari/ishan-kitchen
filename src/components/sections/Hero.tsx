@@ -111,6 +111,18 @@ export default function Hero() {
       });
       document.addEventListener("click", onFirstInteraction, { once: true });
 
+      // Belt-and-suspenders against anything leaving it paused mid-loop —
+      // a stall/seek hiccup, an OS-level interruption (a phone call,
+      // another app grabbing the audio session), etc. Skipped while the
+      // tab itself is hidden, since resuming there would just fight the
+      // browser's own background-tab suspension; visibilitychange below
+      // resumes it once the tab is foregrounded again.
+      const resumeIfPaused = () => {
+        if (clip.paused && !document.hidden) clip.play().catch(() => {});
+      };
+      clip.addEventListener("pause", resumeIfPaused);
+      document.addEventListener("visibilitychange", resumeIfPaused);
+
       skipToEndRef.current = () => {};
 
       return () => {
@@ -118,6 +130,8 @@ export default function Hero() {
         window.clearTimeout(fallbackTimer);
         document.removeEventListener("touchstart", onFirstInteraction);
         document.removeEventListener("click", onFirstInteraction);
+        clip.removeEventListener("pause", resumeIfPaused);
+        document.removeEventListener("visibilitychange", resumeIfPaused);
         skipToEndRef.current = () => {};
       };
     }
@@ -327,15 +341,6 @@ export default function Hero() {
           >
             Kitchens, thoughtfully made.
           </h2>
-          <Link
-            href="/#gallery"
-            className="group inline-flex items-center gap-2.5 border border-white/30 bg-white/10 px-6 py-3 text-[10px] font-medium uppercase tracking-[0.22em] text-white backdrop-blur-md transition-colors hover:bg-white hover:text-ink"
-          >
-            Explore Our Kitchens
-            <span className="transition-transform duration-300 group-hover:translate-x-1">
-              →
-            </span>
-          </Link>
         </div>
       </div>
 
